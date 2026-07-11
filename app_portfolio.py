@@ -1,5 +1,5 @@
 # ============================================================
-# APP STREAMLIT - OPTIMIZACION DE PORTAFOLIO
+# APP STREAMLIT - OPTIMIZADOR DE PORTAFOLIOS
 # ============================================================
 # requirements.txt:
 # streamlit
@@ -22,148 +22,70 @@ import matplotlib.pyplot as plt
 # ============================================================
 
 st.set_page_config(
-    page_title="UTDT | Optimizador de portafolios",
+    page_title="UTDT | Optimizador de Portafolios",
     layout="wide"
 )
 
 # ============================================================
-# ESTILO GENERAL
+# ESTILO MINIMALISTA
 # ============================================================
 
-UTDT_BLACK = "#111111"
-UTDT_DARK = "#1A1A1A"
-UTDT_YELLOW = "#F5A800"
-UTDT_TURQUOISE = "#00C4B3"
-UTDT_GRAY = "#D8D8D8"
-BACKGROUND = "#F6F6F6"
-
 st.markdown(
-    f"""
+    """
     <style>
-        .stApp {{
-            background-color: {BACKGROUND};
-        }}
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
 
-        /* Sidebar */
-        section[data-testid="stSidebar"] {{
-            background-color: {UTDT_BLACK};
-        }}
+    .main-title {
+        font-size: 44px;
+        font-weight: 800;
+        color: #111111;
+        margin-bottom: 0px;
+    }
 
-        section[data-testid="stSidebar"] h1,
-        section[data-testid="stSidebar"] h2,
-        section[data-testid="stSidebar"] h3,
-        section[data-testid="stSidebar"] label,
-        section[data-testid="stSidebar"] p,
-        section[data-testid="stSidebar"] span {{
-            color: white !important;
-        }}
+    .utdt-label {
+        font-size: 16px;
+        font-weight: 700;
+        color: #F5A800;
+        letter-spacing: 2px;
+        margin-bottom: 6px;
+    }
 
-        /* Inputs del sidebar: texto negro para que no queden invisibles */
-        section[data-testid="stSidebar"] input,
-        section[data-testid="stSidebar"] textarea {{
-            color: #111111 !important;
-            background-color: white !important;
-        }}
+    .subtitle {
+        font-size: 22px;
+        color: #555555;
+        margin-top: 4px;
+        margin-bottom: 18px;
+    }
 
-        section[data-testid="stSidebar"] div[data-baseweb="select"] * {{
-            color: #111111 !important;
-        }}
+    .info-card {
+        background-color: #FFFFFF;
+        border-left: 7px solid #F5A800;
+        border-radius: 14px;
+        padding: 24px;
+        margin-bottom: 28px;
+        box-shadow: 0px 2px 12px rgba(0,0,0,0.06);
+    }
 
-        section[data-testid="stSidebar"] button {{
-            background-color: {UTDT_YELLOW} !important;
-            color: #111111 !important;
-            font-weight: 700 !important;
-            border-radius: 10px !important;
-        }}
+    .small-muted {
+        color: #666666;
+        font-size: 15px;
+        line-height: 1.6;
+    }
 
-        div[data-testid="stMetric"] {{
-            background-color: white;
-            border: 1px solid #E5E5E5;
-            padding: 16px;
-            border-radius: 14px;
-            box-shadow: 0px 2px 8px rgba(0,0,0,0.06);
-        }}
+    div[data-testid="stMetric"] {
+        background-color: white;
+        border: 1px solid #E5E5E5;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0px 2px 8px rgba(0,0,0,0.05);
+    }
 
-        h1, h2, h3 {{
-            color: {UTDT_BLACK};
-        }}
-
-        .main-hero {{
-            background: linear-gradient(135deg, #111111 0%, #1c1c1c 100%);
-            border-left: 12px solid {UTDT_YELLOW};
-            border-radius: 22px;
-            padding: 40px 44px;
-            margin-bottom: 28px;
-            box-shadow: 0px 8px 24px rgba(0,0,0,0.18);
-        }}
-
-        .utdt-badge {{
-            display: inline-block;
-            background-color: {UTDT_BLACK};
-            color: white;
-            border-left: 8px solid {UTDT_YELLOW};
-            padding: 16px 34px;
-            border-radius: 16px;
-            font-size: 30px;
-            font-weight: 900;
-            letter-spacing: 1px;
-            margin-bottom: 26px;
-            box-shadow: 0px 4px 15px rgba(0,0,0,0.25);
-        }}
-
-        .hero-title {{
-            color: white;
-            font-size: 52px;
-            font-weight: 900;
-            margin: 0;
-            line-height: 1.1;
-        }}
-
-        .hero-subtitle {{
-            color: {UTDT_GRAY};
-            font-size: 25px;
-            margin-top: 18px;
-            margin-bottom: 24px;
-        }}
-
-        .pill {{
-            display: inline-block;
-            background-color: {UTDT_YELLOW};
-            color: #111111;
-            padding: 8px 15px;
-            border-radius: 999px;
-            font-weight: 800;
-            margin-right: 8px;
-            margin-bottom: 10px;
-        }}
-
-        .pill-2 {{
-            display: inline-block;
-            background-color: {UTDT_TURQUOISE};
-            color: #111111;
-            padding: 8px 15px;
-            border-radius: 999px;
-            font-weight: 800;
-            margin-right: 8px;
-            margin-bottom: 10px;
-        }}
-
-        .hero-text {{
-            color: #EFEFEF;
-            font-size: 17px;
-            line-height: 1.55;
-            margin-top: 18px;
-            max-width: 1100px;
-        }}
-
-        .info-box {{
-            background-color: white;
-            border: 1px solid #E6E6E6;
-            padding: 20px 24px;
-            border-radius: 16px;
-            margin-bottom: 20px;
-            box-shadow: 0px 2px 8px rgba(0,0,0,0.04);
-        }}
+    section[data-testid="stSidebar"] {
+        background-color: #F7F7F7;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -175,35 +97,18 @@ st.markdown(
 
 st.markdown(
     """
-    <div class="main-hero">
-        <div class="utdt-badge">UTDT</div>
+    <div class="info-card">
+        <div class="utdt-label">UNIVERSIDAD TORCUATO DI TELLA</div>
+        <div class="main-title">Optimizador de Portafolios</div>
+        <div class="subtitle">Construcción y optimización de una cartera de acciones</div>
 
-        <h1 class="hero-title">Optimizador de portafolios</h1>
-
-        <div class="hero-subtitle">
-            Construcción y optimización de una cartera de acciones
-        </div>
-
-        <span class="pill">Grupo 2</span>
-        <span class="pill-2">Finanzas Personales</span>
-        <span class="pill">Universidad Torcuato Di Tella</span>
-
-        <div class="hero-text">
-            <b>Integrantes:</b> Antonucci, Favata, Manzini, Nestler y Sansone.<br>
+        <div class="small-muted">
+            <b>Grupo 2</b><br>
+            <b>Integrantes:</b> Antonucci · Favata · Manzini · Nestler · Sansone<br><br>
             Esta aplicación permite descargar precios históricos, calcular retornos,
-            esperanzas, volatilidades, correlaciones, covarianzas y optimizar una cartera
-            mediante máximo Sharpe o retorno objetivo.
+            volatilidades, correlaciones, covarianzas, drawdowns y optimizar una cartera
+            utilizando máximo Sharpe o retorno objetivo.
         </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    """
-    <div class="info-box">
-        <b>Objetivo:</b> analizar una cartera internacional de activos, evaluar su relación
-        riesgo-retorno y obtener pesos óptimos bajo distintas restricciones de inversión.
     </div>
     """,
     unsafe_allow_html=True
@@ -408,7 +313,15 @@ def negative_sharpe(weights, mu, cov, rf_annual):
     return -portfolio_sharpe(weights, mu, cov, rf_annual)
 
 
-def optimizar_portfolio(mu, cov, rf_annual, min_weight, max_weight, optimization_method, target_return=None):
+def optimizar_portfolio(
+    mu,
+    cov,
+    rf_annual,
+    min_weight,
+    max_weight,
+    optimization_method,
+    target_return=None
+):
     n_assets = len(mu)
 
     constraints = [
@@ -458,15 +371,35 @@ def calcular_drawdown(returns):
     wealth = (1 + returns).cumprod()
     running_max = wealth.cummax()
     drawdown = wealth / running_max - 1
-    return drawdown, drawdown.min()
+    max_drawdown = drawdown.min()
+    return drawdown, max_drawdown
 
 
-def generar_portfolios_simulados(mu, cov, rf_annual, n_simulations):
+def generar_portfolios_simulados(mu, cov, rf_annual, min_weight, max_weight, n_simulations):
     results = []
+    attempts = 0
+    max_attempts = int(n_simulations) * 30
+    n_assets = len(mu)
 
-    for _ in range(int(n_simulations)):
-        weights = np.random.random(len(mu))
-        weights = weights / np.sum(weights)
+    while len(results) < int(n_simulations) and attempts < max_attempts:
+        attempts += 1
+
+        if min_weight < 0:
+            weights = np.random.uniform(min_weight, max_weight, n_assets)
+
+            if np.sum(weights) == 0:
+                continue
+
+            weights = weights / np.sum(weights)
+
+            if np.any(weights < min_weight) or np.any(weights > max_weight):
+                continue
+        else:
+            weights = np.random.random(n_assets)
+            weights = weights / np.sum(weights)
+
+            if np.any(weights < min_weight) or np.any(weights > max_weight):
+                continue
 
         ret = portfolio_return(weights, mu)
         vol = portfolio_volatility(weights, cov)
@@ -581,10 +514,10 @@ if boton:
     portfolio_drawdown, portfolio_max_drawdown = calcular_drawdown(portfolio_returns)
 
     # ========================================================
-    # OUTPUT PRINCIPAL
+    # RESULTADOS PRINCIPALES
     # ========================================================
 
-    st.header("Resultados del portfolio óptimo")
+    st.header("Resultados")
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -609,37 +542,33 @@ if boton:
     # PESOS
     # ========================================================
 
-    st.subheader("Pesos óptimos")
+    st.subheader("Composición de la cartera")
 
     weights_show = weights_df[["Activo", "Peso óptimo (%)"]].copy()
     weights_show["Peso óptimo (%)"] = weights_show["Peso óptimo (%)"].map(lambda x: f"{x:.2f}%")
 
     st.dataframe(weights_show, use_container_width=True)
 
-    # ========================================================
-    # GRAFICO PESOS
-    # ========================================================
+    # Gráfico de pesos
 
-    st.subheader("Distribución de pesos óptimos")
+    fig_pie, ax_pie = plt.subplots(figsize=(7, 5))
 
     pie_df = weights_df.copy()
-    pie_df["Peso abs"] = pie_df["Peso óptimo"].abs()
-    pie_df = pie_df[pie_df["Peso abs"] > 0.0001]
+    pie_df["Peso absoluto"] = pie_df["Peso óptimo"].abs()
+    pie_df = pie_df[pie_df["Peso absoluto"] > 0.0001]
 
-    fig_pie, ax_pie = plt.subplots(figsize=(8, 6))
-
-    ax_pie.pie(
-        pie_df["Peso abs"],
-        labels=pie_df["Activo"],
-        autopct="%1.1f%%",
-        startangle=90
-    )
-
-    ax_pie.set_title("Participación por peso absoluto")
-    st.pyplot(fig_pie)
+    if not pie_df.empty:
+        ax_pie.pie(
+            pie_df["Peso absoluto"],
+            labels=pie_df["Activo"],
+            autopct="%1.1f%%",
+            startangle=90
+        )
+        ax_pie.set_title("Pesos óptimos por activo")
+        st.pyplot(fig_pie)
 
     if allow_short:
-        st.caption("Nota: como hay short selling, el gráfico muestra pesos absolutos para visualizar la magnitud de cada posición.")
+        st.caption("Nota: como se permite short selling, el gráfico muestra pesos absolutos.")
 
     # ========================================================
     # PRECIOS BASE 100
@@ -647,7 +576,12 @@ if boton:
 
     st.subheader("Evolución histórica de precios - Base 100")
 
-    prices_base100 = prices_monthly / prices_monthly.dropna().iloc[0] * 100
+    prices_base100 = prices_monthly.copy()
+
+    for col in prices_base100.columns:
+        first_valid = prices_base100[col].dropna().iloc[0]
+        prices_base100[col] = prices_base100[col] / first_valid * 100
+
     st.line_chart(prices_base100)
 
     # ========================================================
@@ -675,15 +609,17 @@ if boton:
     st.line_chart(drawdown_df)
 
     # ========================================================
-    # GRAFICO RIESGO - RETORNO
+    # RIESGO RETORNO
     # ========================================================
 
-    st.subheader("Gráfico riesgo-retorno")
+    st.subheader("Frontera eficiente simulada")
 
     results_sim = generar_portfolios_simulados(
         mu=mu_annual,
         cov=cov_annual,
         rf_annual=rf_annual,
+        min_weight=min_weight,
+        max_weight=max_weight,
         n_simulations=n_simulations
     )
 
@@ -692,14 +628,17 @@ if boton:
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    scatter = ax.scatter(
-        results_sim["Volatilidad"],
-        results_sim["Retorno"],
-        c=results_sim["Sharpe"],
-        cmap="viridis",
-        alpha=0.35,
-        s=12
-    )
+    if not results_sim.empty:
+        scatter = ax.scatter(
+            results_sim["Volatilidad"],
+            results_sim["Retorno"],
+            c=results_sim["Sharpe"],
+            cmap="viridis",
+            alpha=0.35,
+            s=12
+        )
+        cbar = fig.colorbar(scatter, ax=ax)
+        cbar.set_label("Sharpe Ratio")
 
     ax.scatter(
         asset_vols,
@@ -756,15 +695,12 @@ if boton:
 
     ax.set_xlabel("Desvío estándar anual")
     ax.set_ylabel("Retorno esperado anual")
-    ax.set_title("Relación riesgo-retorno del portfolio")
+    ax.set_title("Relación riesgo-retorno")
     ax.legend()
     ax.grid(True, alpha=0.3)
 
     ax.xaxis.set_major_formatter(lambda x, pos: f"{x:.0%}")
     ax.yaxis.set_major_formatter(lambda y, pos: f"{y:.0%}")
-
-    cbar = fig.colorbar(scatter, ax=ax)
-    cbar.set_label("Sharpe Ratio")
 
     st.pyplot(fig)
 
@@ -853,9 +789,11 @@ if boton:
     returns_monthly_excel = returns_monthly * 100
 
     results_sim_excel = results_sim.copy()
-    results_sim_excel["Retorno (%)"] = results_sim_excel["Retorno"] * 100
-    results_sim_excel["Volatilidad (%)"] = results_sim_excel["Volatilidad"] * 100
-    results_sim_excel = results_sim_excel[["Retorno (%)", "Volatilidad (%)", "Sharpe"]]
+
+    if not results_sim_excel.empty:
+        results_sim_excel["Retorno (%)"] = results_sim_excel["Retorno"] * 100
+        results_sim_excel["Volatilidad (%)"] = results_sim_excel["Volatilidad"] * 100
+        results_sim_excel = results_sim_excel[["Retorno (%)", "Volatilidad (%)", "Sharpe"]]
 
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         prices_monthly.to_excel(writer, sheet_name="Precios mensuales")
@@ -880,6 +818,5 @@ if boton:
 
 else:
     st.info(
-        "Ingresá las fechas, tickers y parámetros en el panel izquierdo. "
-        "Después tocá 'Calcular portfolio'."
+        "Ingresá los parámetros en el panel izquierdo y luego tocá **Calcular portfolio**."
     )
