@@ -134,7 +134,8 @@ def descargar_precios(tickers, fecha_inicio, fecha_final):
         start=fecha_inicio,
         end=fecha_final,
         auto_adjust=True,
-        progress=False
+        progress=False,
+        threads=False
     )
 
     if data.empty:
@@ -149,11 +150,14 @@ def descargar_precios(tickers, fecha_inicio, fecha_final):
     prices = prices.dropna(axis=1, how="all")
     prices.index = pd.to_datetime(prices.index)
 
-    # Último precio disponible de cada mes
-    prices_monthly = prices.resample("M").last()
+    # Último precio disponible de cada mes.
+    # Compatible con distintas versiones de pandas.
+    try:
+        prices_monthly = prices.resample("ME").last()
+    except ValueError:
+        prices_monthly = prices.resample("M").last()
 
     return prices_monthly
-
 
 def calcular_metricas(returns_monthly):
     mu_monthly = returns_monthly.mean()
