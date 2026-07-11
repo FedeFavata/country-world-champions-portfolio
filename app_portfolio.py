@@ -1,5 +1,5 @@
 # ============================================================
-# APP STREAMLIT - COUNTRY WORLD CHAMPIONS ADR PORTFOLIO
+# APP STREAMLIT - OPTIMIZACION DE PORTAFOLIO
 # ============================================================
 # requirements.txt:
 # streamlit
@@ -22,106 +22,147 @@ import matplotlib.pyplot as plt
 # ============================================================
 
 st.set_page_config(
-    page_title="UTDT | Optimizador de Portafolio",
+    page_title="UTDT | Optimizador de portafolios",
     layout="wide"
 )
 
 # ============================================================
-# ESTILO UTDT
+# ESTILO GENERAL
 # ============================================================
 
-UTDT_BLACK = "#0E0E0E"
+UTDT_BLACK = "#111111"
 UTDT_DARK = "#1A1A1A"
 UTDT_YELLOW = "#F5A800"
 UTDT_TURQUOISE = "#00C4B3"
-UTDT_WHITE = "#FFFFFF"
-UTDT_GRAY = "#D9D9D9"
+UTDT_GRAY = "#D8D8D8"
+BACKGROUND = "#F6F6F6"
 
 st.markdown(
     f"""
     <style>
         .stApp {{
-            background-color: #F7F7F7;
+            background-color: {BACKGROUND};
         }}
 
+        /* Sidebar */
         section[data-testid="stSidebar"] {{
             background-color: {UTDT_BLACK};
         }}
 
-        section[data-testid="stSidebar"] * {{
+        section[data-testid="stSidebar"] h1,
+        section[data-testid="stSidebar"] h2,
+        section[data-testid="stSidebar"] h3,
+        section[data-testid="stSidebar"] label,
+        section[data-testid="stSidebar"] p,
+        section[data-testid="stSidebar"] span {{
             color: white !important;
+        }}
+
+        /* Inputs del sidebar: texto negro para que no queden invisibles */
+        section[data-testid="stSidebar"] input,
+        section[data-testid="stSidebar"] textarea {{
+            color: #111111 !important;
+            background-color: white !important;
+        }}
+
+        section[data-testid="stSidebar"] div[data-baseweb="select"] * {{
+            color: #111111 !important;
+        }}
+
+        section[data-testid="stSidebar"] button {{
+            background-color: {UTDT_YELLOW} !important;
+            color: #111111 !important;
+            font-weight: 700 !important;
+            border-radius: 10px !important;
         }}
 
         div[data-testid="stMetric"] {{
             background-color: white;
             border: 1px solid #E5E5E5;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0px 2px 8px rgba(0,0,0,0.05);
+            padding: 16px;
+            border-radius: 14px;
+            box-shadow: 0px 2px 8px rgba(0,0,0,0.06);
         }}
 
         h1, h2, h3 {{
             color: {UTDT_BLACK};
         }}
 
-        .utdt-hero {{
-            background: linear-gradient(135deg, {UTDT_BLACK} 0%, {UTDT_DARK} 70%);
-            padding: 34px;
-            border-radius: 20px;
-            margin-bottom: 25px;
-            border-left: 10px solid {UTDT_YELLOW};
-            box-shadow: 0px 6px 18px rgba(0,0,0,0.18);
+        .main-hero {{
+            background: linear-gradient(135deg, #111111 0%, #1c1c1c 100%);
+            border-left: 12px solid {UTDT_YELLOW};
+            border-radius: 22px;
+            padding: 40px 44px;
+            margin-bottom: 28px;
+            box-shadow: 0px 8px 24px rgba(0,0,0,0.18);
         }}
 
-        .utdt-title {{
+        .utdt-badge {{
+            display: inline-block;
+            background-color: {UTDT_BLACK};
             color: white;
-            font-size: 42px;
-            font-weight: 800;
-            margin-bottom: 4px;
+            border-left: 8px solid {UTDT_YELLOW};
+            padding: 16px 34px;
+            border-radius: 16px;
+            font-size: 30px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            margin-bottom: 26px;
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.25);
         }}
 
-        .utdt-subtitle {{
+        .hero-title {{
+            color: white;
+            font-size: 52px;
+            font-weight: 900;
+            margin: 0;
+            line-height: 1.1;
+        }}
+
+        .hero-subtitle {{
             color: {UTDT_GRAY};
-            font-size: 21px;
-            margin-top: 0px;
-            margin-bottom: 18px;
+            font-size: 25px;
+            margin-top: 18px;
+            margin-bottom: 24px;
         }}
 
-        .utdt-pill {{
+        .pill {{
             display: inline-block;
             background-color: {UTDT_YELLOW};
-            color: {UTDT_BLACK};
-            padding: 7px 14px;
+            color: #111111;
+            padding: 8px 15px;
             border-radius: 999px;
-            font-weight: 700;
+            font-weight: 800;
             margin-right: 8px;
             margin-bottom: 10px;
         }}
 
-        .utdt-pill-2 {{
+        .pill-2 {{
             display: inline-block;
             background-color: {UTDT_TURQUOISE};
-            color: {UTDT_BLACK};
-            padding: 7px 14px;
+            color: #111111;
+            padding: 8px 15px;
             border-radius: 999px;
-            font-weight: 700;
+            font-weight: 800;
             margin-right: 8px;
             margin-bottom: 10px;
         }}
 
-        .utdt-description {{
+        .hero-text {{
             color: #EFEFEF;
-            font-size: 16px;
+            font-size: 17px;
             line-height: 1.55;
-            max-width: 1050px;
+            margin-top: 18px;
+            max-width: 1100px;
         }}
 
-        .utdt-section {{
+        .info-box {{
             background-color: white;
-            padding: 20px;
-            border-radius: 14px;
             border: 1px solid #E6E6E6;
-            margin-bottom: 18px;
+            padding: 20px 24px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0px 2px 8px rgba(0,0,0,0.04);
         }}
     </style>
     """,
@@ -132,60 +173,37 @@ st.markdown(
 # PORTADA
 # ============================================================
 
-col_logo, col_text = st.columns([1, 5])
+st.markdown(
+    """
+    <div class="main-hero">
+        <div class="utdt-badge">UTDT</div>
 
-with col_logo:
-    try:
-        st.image("utdt_logo.png", width=180)
-    except Exception:
-        st.markdown(
-            f"""
-            <div style="
-                background-color:{UTDT_BLACK};
-                padding:18px;
-                border-radius:14px;
-                border-left:8px solid {UTDT_YELLOW};
-                color:white;
-                text-align:center;
-                font-weight:800;
-                font-size:24px;
-            ">
-                UTDT
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        <h1 class="hero-title">Optimizador de portafolios</h1>
 
-with col_text:
-    st.markdown(
-        """
-        <div class="utdt-hero">
-            <div class="utdt-title">Optimizador de portafolios</div>
-            <div class="utdt-subtitle">
-                Construcción y optimización de una cartera de acciones
-            </div>
-
-            <span class="utdt-pill">Grupo 2</span>
-            <span class="utdt-pill-2">Finanzas Personales</span>
-            <span class="utdt-pill">Universidad Torcuato Di Tella</span>
-
-            <p class="utdt-description">
-                Integrantes: <b>Antonucci, Favata, Manzini, Nestler y Sansone</b>.
-                La aplicación permite descargar precios históricos, calcular retornos,
-                esperanzas, volatilidades, correlaciones, covarianzas, drawdowns y optimizar
-                una cartera mediante máximo Sharpe o retorno objetivo.
-            </p>
+        <div class="hero-subtitle">
+            Construcción y optimización de una cartera de acciones
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+
+        <span class="pill">Grupo 2</span>
+        <span class="pill-2">Finanzas Personales</span>
+        <span class="pill">Universidad Torcuato Di Tella</span>
+
+        <div class="hero-text">
+            <b>Integrantes:</b> Antonucci, Favata, Manzini, Nestler y Sansone.<br>
+            Esta aplicación permite descargar precios históricos, calcular retornos,
+            esperanzas, volatilidades, correlaciones, covarianzas y optimizar una cartera
+            mediante máximo Sharpe o retorno objetivo.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 st.markdown(
     """
-    <div class="utdt-section">
-        <b>Objetivo del análisis:</b> evaluar una estrategia global de inversión basada en empresas
-        representativas de distintos países, usando activos comparables en USD y herramientas de
-        optimización de portafolios.
+    <div class="info-box">
+        <b>Objetivo:</b> analizar una cartera internacional de activos, evaluar su relación
+        riesgo-retorno y obtener pesos óptimos bajo distintas restricciones de inversión.
     </div>
     """,
     unsafe_allow_html=True
@@ -276,13 +294,9 @@ st.sidebar.subheader("Método de optimización")
 
 optimization_method = st.sidebar.radio(
     "Elegir método",
-    [
-        "Maximizar Sharpe",
-        "Retorno objetivo"
-    ]
+    ["Maximizar Sharpe", "Retorno objetivo"]
 )
 
-target_return_pct = None
 target_return = None
 
 if optimization_method == "Retorno objetivo":
@@ -292,22 +306,7 @@ if optimization_method == "Retorno objetivo":
         step=0.50,
         format="%.2f"
     )
-
     target_return = target_return_pct / 100
-
-st.sidebar.divider()
-
-st.sidebar.subheader("Benchmark")
-
-use_benchmark = st.sidebar.checkbox(
-    "Comparar contra benchmark",
-    value=True
-)
-
-benchmark_ticker = st.sidebar.text_input(
-    "Ticker benchmark",
-    value="SPY"
-)
 
 st.sidebar.divider()
 
@@ -358,10 +357,6 @@ def descargar_precios(tickers, fecha_inicio, fecha_final):
                 return pd.DataFrame()
 
         prices = prices.dropna(axis=1, how="all")
-
-        if prices.empty:
-            return pd.DataFrame()
-
         prices.index = pd.to_datetime(prices.index)
 
         try:
@@ -378,14 +373,9 @@ def descargar_precios(tickers, fecha_inicio, fecha_final):
 
 
 def calcular_metricas(returns_monthly):
-    mu_monthly = returns_monthly.mean()
-    mu_annual = mu_monthly * 12
-
-    cov_monthly = returns_monthly.cov()
-    cov_annual = cov_monthly * 12
-
+    mu_annual = returns_monthly.mean() * 12
+    cov_annual = returns_monthly.cov() * 12
     corr_matrix = returns_monthly.corr()
-
     vol_annual = returns_monthly.std() * np.sqrt(12)
 
     summary = pd.DataFrame({
@@ -418,19 +408,7 @@ def negative_sharpe(weights, mu, cov, rf_annual):
     return -portfolio_sharpe(weights, mu, cov, rf_annual)
 
 
-def portfolio_variance(weights, cov):
-    return np.dot(weights.T, np.dot(cov, weights))
-
-
-def optimizar_portfolio(
-    mu,
-    cov,
-    rf_annual,
-    min_weight,
-    max_weight,
-    optimization_method,
-    target_return=None
-):
+def optimizar_portfolio(mu, cov, rf_annual, min_weight, max_weight, optimization_method, target_return=None):
     n_assets = len(mu)
 
     constraints = [
@@ -470,66 +448,33 @@ def optimizar_portfolio(
     return result
 
 
-def calcular_drawdown(returns):
-    wealth = (1 + returns).cumprod()
-    running_max = wealth.cummax()
-    drawdown = wealth / running_max - 1
-    max_drawdown = drawdown.min()
-    return drawdown, max_drawdown
-
-
-def generar_portfolios_simulados(mu, cov, rf_annual, min_weight, max_weight, n_simulations):
-    n_assets = len(mu)
-    results = []
-    weights_list = []
-
-    max_attempts = int(n_simulations) * 40
-    attempts = 0
-
-    while len(results) < int(n_simulations) and attempts < max_attempts:
-        attempts += 1
-
-        if min_weight < 0:
-            w = np.random.uniform(min_weight, max_weight, n_assets)
-
-            if np.sum(w) == 0:
-                continue
-
-            w = w / np.sum(w)
-
-            if np.any(w < min_weight - 1e-8) or np.any(w > max_weight + 1e-8):
-                continue
-        else:
-            w = np.random.random(n_assets)
-            w = w / np.sum(w)
-
-            if np.any(w < min_weight - 1e-8) or np.any(w > max_weight + 1e-8):
-                continue
-
-        ret = portfolio_return(w, mu)
-        vol = portfolio_volatility(w, cov)
-        sharpe = (ret - rf_annual) / vol if vol != 0 else np.nan
-
-        results.append([ret, vol, sharpe])
-        weights_list.append(w)
-
-    results_df = pd.DataFrame(
-        results,
-        columns=["Retorno", "Volatilidad", "Sharpe"]
-    )
-
-    weights_sim_df = pd.DataFrame(
-        weights_list,
-        columns=mu.index
-    )
-
-    return results_df, weights_sim_df
-
-
 def limpiar_valores_chicos(x, limite=1e-8):
     if abs(x) < limite:
         return 0
     return x
+
+
+def calcular_drawdown(returns):
+    wealth = (1 + returns).cumprod()
+    running_max = wealth.cummax()
+    drawdown = wealth / running_max - 1
+    return drawdown, drawdown.min()
+
+
+def generar_portfolios_simulados(mu, cov, rf_annual, n_simulations):
+    results = []
+
+    for _ in range(int(n_simulations)):
+        weights = np.random.random(len(mu))
+        weights = weights / np.sum(weights)
+
+        ret = portfolio_return(weights, mu)
+        vol = portfolio_volatility(weights, cov)
+        sharpe = (ret - rf_annual) / vol if vol != 0 else np.nan
+
+        results.append([ret, vol, sharpe])
+
+    return pd.DataFrame(results, columns=["Retorno", "Volatilidad", "Sharpe"])
 
 
 # ============================================================
@@ -580,8 +525,6 @@ if boton:
     # ========================================================
 
     returns_monthly = prices_monthly.pct_change().dropna(how="all")
-    returns_monthly = returns_monthly.dropna(axis=1, how="all")
-
     returns_clean = returns_monthly.dropna()
 
     if returns_clean.empty:
@@ -610,7 +553,7 @@ if boton:
 
     if not result.success:
         st.error("La optimización no encontró una solución factible. Probá relajar restricciones o bajar el retorno objetivo.")
-        st.code(result.message)
+        st.code(str(result.message))
         st.stop()
 
     optimal_weights = result.x
@@ -627,39 +570,15 @@ if boton:
 
     weights_df["Peso óptimo"] = weights_df["Peso óptimo"].apply(lambda x: limpiar_valores_chicos(x))
     weights_df["Peso óptimo (%)"] = weights_df["Peso óptimo (%)"].apply(lambda x: 0 if abs(x) < 1e-6 else x)
-
     weights_df = weights_df.sort_values("Peso óptimo", ascending=False)
 
     long_exposure = weights_df.loc[weights_df["Peso óptimo"] > 0, "Peso óptimo"].sum()
     short_exposure = weights_df.loc[weights_df["Peso óptimo"] < 0, "Peso óptimo"].sum()
     net_exposure = weights_df["Peso óptimo"].sum()
 
-    # Portfolio histórico
     portfolio_returns = returns_clean.dot(optimal_weights)
     portfolio_wealth = (1 + portfolio_returns).cumprod() * 100
     portfolio_drawdown, portfolio_max_drawdown = calcular_drawdown(portfolio_returns)
-
-    equal_weights = np.array([1 / len(returns_clean.columns)] * len(returns_clean.columns))
-    equal_returns = returns_clean.dot(equal_weights)
-    equal_wealth = (1 + equal_returns).cumprod() * 100
-    equal_drawdown, equal_max_drawdown = calcular_drawdown(equal_returns)
-
-    # Benchmark
-    benchmark_returns = None
-    benchmark_wealth = None
-    benchmark_max_drawdown = None
-
-    if use_benchmark and benchmark_ticker.strip() != "":
-        benchmark_prices = descargar_precios([benchmark_ticker.strip()], fecha_inicio, fecha_final)
-
-        if not benchmark_prices.empty:
-            benchmark_returns_raw = benchmark_prices.pct_change().dropna()
-
-            if benchmark_returns_raw.shape[1] > 0:
-                benchmark_returns = benchmark_returns_raw.iloc[:, 0]
-                benchmark_returns = benchmark_returns.loc[benchmark_returns.index.intersection(portfolio_returns.index)]
-                benchmark_wealth = (1 + benchmark_returns).cumprod() * 100
-                _, benchmark_max_drawdown = calcular_drawdown(benchmark_returns)
 
     # ========================================================
     # OUTPUT PRINCIPAL
@@ -687,7 +606,7 @@ if boton:
         st.caption(f"Retorno objetivo anual cargado: **{target_return:.2%}**")
 
     # ========================================================
-    # PESOS OPTIMOS
+    # PESOS
     # ========================================================
 
     st.subheader("Pesos óptimos")
@@ -697,7 +616,10 @@ if boton:
 
     st.dataframe(weights_show, use_container_width=True)
 
-    # Pie chart
+    # ========================================================
+    # GRAFICO PESOS
+    # ========================================================
+
     st.subheader("Distribución de pesos óptimos")
 
     pie_df = weights_df.copy()
@@ -720,29 +642,23 @@ if boton:
         st.caption("Nota: como hay short selling, el gráfico muestra pesos absolutos para visualizar la magnitud de cada posición.")
 
     # ========================================================
-    # GRAFICO PRECIOS HISTORICOS BASE 100
+    # PRECIOS BASE 100
     # ========================================================
 
     st.subheader("Evolución histórica de precios - Base 100")
 
-    prices_base100 = prices_monthly.copy()
-    prices_base100 = prices_base100 / prices_base100.dropna().iloc[0] * 100
-
+    prices_base100 = prices_monthly / prices_monthly.dropna().iloc[0] * 100
     st.line_chart(prices_base100)
 
     # ========================================================
-    # WEALTH INDEX PORTFOLIO VS EQUAL WEIGHT VS BENCHMARK
+    # WEALTH INDEX
     # ========================================================
 
     st.subheader("Evolución de USD 100 invertidos")
 
     wealth_df = pd.DataFrame({
-        "Portfolio óptimo": portfolio_wealth,
-        "Portfolio igual ponderado": equal_wealth
+        "Portfolio óptimo": portfolio_wealth
     })
-
-    if benchmark_wealth is not None:
-        wealth_df[f"Benchmark {benchmark_ticker.strip()}"] = benchmark_wealth
 
     st.line_chart(wealth_df)
 
@@ -750,28 +666,13 @@ if boton:
     # DRAWDOWN
     # ========================================================
 
-    st.subheader("Drawdown histórico")
+    st.subheader("Drawdown histórico del portfolio")
 
     drawdown_df = pd.DataFrame({
-        "Portfolio óptimo": portfolio_drawdown * 100,
-        "Portfolio igual ponderado": equal_drawdown * 100
+        "Portfolio óptimo": portfolio_drawdown * 100
     })
 
-    if benchmark_returns is not None:
-        benchmark_drawdown, _ = calcular_drawdown(benchmark_returns)
-        drawdown_df[f"Benchmark {benchmark_ticker.strip()}"] = benchmark_drawdown * 100
-
     st.line_chart(drawdown_df)
-
-    if benchmark_max_drawdown is not None:
-        col_a, col_b, col_c = st.columns(3)
-        col_a.metric("Max DD Portfolio óptimo", f"{portfolio_max_drawdown:.2%}")
-        col_b.metric("Max DD Igual ponderado", f"{equal_max_drawdown:.2%}")
-        col_c.metric(f"Max DD {benchmark_ticker.strip()}", f"{benchmark_max_drawdown:.2%}")
-    else:
-        col_a, col_b = st.columns(2)
-        col_a.metric("Max DD Portfolio óptimo", f"{portfolio_max_drawdown:.2%}")
-        col_b.metric("Max DD Igual ponderado", f"{equal_max_drawdown:.2%}")
 
     # ========================================================
     # GRAFICO RIESGO - RETORNO
@@ -779,12 +680,10 @@ if boton:
 
     st.subheader("Gráfico riesgo-retorno")
 
-    results_sim, weights_sim = generar_portfolios_simulados(
+    results_sim = generar_portfolios_simulados(
         mu=mu_annual,
         cov=cov_annual,
         rf_annual=rf_annual,
-        min_weight=min_weight,
-        max_weight=max_weight,
         n_simulations=n_simulations
     )
 
@@ -846,15 +745,6 @@ if boton:
         label="Tasa libre de riesgo"
     )
 
-    ax.text(
-        0,
-        rf_annual,
-        "  Rf",
-        fontsize=10,
-        ha="left",
-        va="center"
-    )
-
     ax.plot(
         [0, optimal_volatility],
         [rf_annual, optimal_return],
@@ -898,35 +788,6 @@ if boton:
         use_container_width=True
     )
 
-    # Heatmap correlaciones
-    st.subheader("Heatmap de correlaciones")
-
-    fig_heat, ax_heat = plt.subplots(figsize=(9, 7))
-
-    im = ax_heat.imshow(corr_matrix, cmap="coolwarm", vmin=-1, vmax=1)
-
-    ax_heat.set_xticks(np.arange(len(corr_matrix.columns)))
-    ax_heat.set_yticks(np.arange(len(corr_matrix.index)))
-
-    ax_heat.set_xticklabels(corr_matrix.columns, rotation=45, ha="right")
-    ax_heat.set_yticklabels(corr_matrix.index)
-
-    for i in range(len(corr_matrix.index)):
-        for j in range(len(corr_matrix.columns)):
-            ax_heat.text(
-                j,
-                i,
-                f"{corr_matrix.iloc[i, j]:.2f}",
-                ha="center",
-                va="center",
-                color="black",
-                fontsize=8
-            )
-
-    ax_heat.set_title("Matriz de correlaciones")
-    fig_heat.colorbar(im, ax=ax_heat)
-    st.pyplot(fig_heat)
-
     st.subheader("Matriz de covarianzas anuales (%)")
 
     cov_annual_show = cov_annual * 100
@@ -961,7 +822,6 @@ if boton:
     portfolio_metrics = pd.DataFrame({
         "Metrica": [
             "Metodo de optimizacion",
-            "Retorno objetivo anual (%)",
             "Retorno esperado anual (%)",
             "Volatilidad anual (%)",
             "Sharpe Ratio",
@@ -973,7 +833,6 @@ if boton:
         ],
         "Valor": [
             optimization_method,
-            target_return * 100 if target_return is not None else "",
             optimal_return * 100,
             optimal_volatility * 100,
             optimal_sharpe,
@@ -998,9 +857,6 @@ if boton:
     results_sim_excel["Volatilidad (%)"] = results_sim_excel["Volatilidad"] * 100
     results_sim_excel = results_sim_excel[["Retorno (%)", "Volatilidad (%)", "Sharpe"]]
 
-    wealth_excel = wealth_df.copy()
-    drawdown_excel = drawdown_df.copy()
-
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         prices_monthly.to_excel(writer, sheet_name="Precios mensuales")
         prices_base100.to_excel(writer, sheet_name="Precios Base 100")
@@ -1011,8 +867,8 @@ if boton:
         weights_excel.to_excel(writer, sheet_name="Pesos optimos %", index=False)
         portfolio_metrics.to_excel(writer, sheet_name="Portfolio optimo", index=False)
         results_sim_excel.to_excel(writer, sheet_name="Portfolios simulados", index=False)
-        wealth_excel.to_excel(writer, sheet_name="Wealth Index")
-        drawdown_excel.to_excel(writer, sheet_name="Drawdown %")
+        wealth_df.to_excel(writer, sheet_name="Wealth Index")
+        drawdown_df.to_excel(writer, sheet_name="Drawdown %")
 
     with open(output_file, "rb") as file:
         st.download_button(
