@@ -27,92 +27,25 @@ st.set_page_config(
 )
 
 # ============================================================
-# ESTILO MINIMALISTA
+# PORTADA MINIMALISTA
 # ============================================================
+
+st.caption("UNIVERSIDAD TORCUATO DI TELLA")
+st.title("Optimizador de Portafolios")
+st.subheader("Construcción y optimización de una cartera de acciones")
 
 st.markdown(
     """
-    <style>
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
+**Grupo 2**  
+**Integrantes:** Antonucci · Favata · Manzini · Nestler · Sansone  
 
-    .main-title {
-        font-size: 44px;
-        font-weight: 800;
-        color: #111111;
-        margin-bottom: 0px;
-    }
-
-    .utdt-label {
-        font-size: 16px;
-        font-weight: 700;
-        color: #F5A800;
-        letter-spacing: 2px;
-        margin-bottom: 6px;
-    }
-
-    .subtitle {
-        font-size: 22px;
-        color: #555555;
-        margin-top: 4px;
-        margin-bottom: 18px;
-    }
-
-    .info-card {
-        background-color: #FFFFFF;
-        border-left: 7px solid #F5A800;
-        border-radius: 14px;
-        padding: 24px;
-        margin-bottom: 28px;
-        box-shadow: 0px 2px 12px rgba(0,0,0,0.06);
-    }
-
-    .small-muted {
-        color: #666666;
-        font-size: 15px;
-        line-height: 1.6;
-    }
-
-    div[data-testid="stMetric"] {
-        background-color: white;
-        border: 1px solid #E5E5E5;
-        padding: 15px;
-        border-radius: 12px;
-        box-shadow: 0px 2px 8px rgba(0,0,0,0.05);
-    }
-
-    section[data-testid="stSidebar"] {
-        background-color: #F7F7F7;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
+Esta aplicación permite descargar precios históricos, calcular retornos, volatilidades,
+correlaciones, covarianzas, drawdowns y optimizar una cartera utilizando máximo Sharpe
+o retorno objetivo.
+"""
 )
 
-# ============================================================
-# PORTADA
-# ============================================================
-
-st.markdown(
-    """
-    <div class="info-card">
-        <div class="utdt-label">UNIVERSIDAD TORCUATO DI TELLA</div>
-        <div class="main-title">Optimizador de Portafolios</div>
-        <div class="subtitle">Construcción y optimización de una cartera de acciones</div>
-
-        <div class="small-muted">
-            <b>Grupo 2</b><br>
-            <b>Integrantes:</b> Antonucci · Favata · Manzini · Nestler · Sansone<br><br>
-            Esta aplicación permite descargar precios históricos, calcular retornos,
-            volatilidades, correlaciones, covarianzas, drawdowns y optimizar una cartera
-            utilizando máximo Sharpe o retorno objetivo.
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.divider()
 
 # ============================================================
 # SIDEBAR - INPUTS
@@ -378,7 +311,7 @@ def calcular_drawdown(returns):
 def generar_portfolios_simulados(mu, cov, rf_annual, min_weight, max_weight, n_simulations):
     results = []
     attempts = 0
-    max_attempts = int(n_simulations) * 30
+    max_attempts = int(n_simulations) * 40
     n_assets = len(mu)
 
     while len(results) < int(n_simulations) and attempts < max_attempts:
@@ -394,6 +327,7 @@ def generar_portfolios_simulados(mu, cov, rf_annual, min_weight, max_weight, n_s
 
             if np.any(weights < min_weight) or np.any(weights > max_weight):
                 continue
+
         else:
             weights = np.random.random(n_assets)
             weights = weights / np.sum(weights)
@@ -408,6 +342,10 @@ def generar_portfolios_simulados(mu, cov, rf_annual, min_weight, max_weight, n_s
         results.append([ret, vol, sharpe])
 
     return pd.DataFrame(results, columns=["Retorno", "Volatilidad", "Sharpe"])
+
+
+def formato_pct_df(df, decimales=2):
+    return df.style.format(f"{{:.{decimales}f}}%")
 
 
 # ============================================================
@@ -429,8 +367,6 @@ if boton:
     if max_weight * len(tickers) < 1:
         st.error("El peso máximo es demasiado bajo para poder sumar 100%. Subilo.")
         st.stop()
-
-    st.divider()
 
     st.subheader("Tickers seleccionados")
     st.write(tickers)
@@ -538,6 +474,8 @@ if boton:
     if optimization_method == "Retorno objetivo":
         st.caption(f"Retorno objetivo anual cargado: **{target_return:.2%}**")
 
+    st.divider()
+
     # ========================================================
     # PESOS
     # ========================================================
@@ -548,8 +486,6 @@ if boton:
     weights_show["Peso óptimo (%)"] = weights_show["Peso óptimo (%)"].map(lambda x: f"{x:.2f}%")
 
     st.dataframe(weights_show, use_container_width=True)
-
-    # Gráfico de pesos
 
     fig_pie, ax_pie = plt.subplots(figsize=(7, 5))
 
@@ -609,7 +545,7 @@ if boton:
     st.line_chart(drawdown_df)
 
     # ========================================================
-    # RIESGO RETORNO
+    # FRONTERA
     # ========================================================
 
     st.subheader("Frontera eficiente simulada")
