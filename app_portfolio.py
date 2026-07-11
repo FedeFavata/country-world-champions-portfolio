@@ -65,7 +65,7 @@ fecha_final = st.sidebar.date_input(
 
 tickers_input = st.sidebar.text_area(
     "Especies / tickers separados por coma",
-    value="LVMUY, IDEXY, BUD, EQNR, HSBC, YPF, RHHBY, AFK"
+    value="LVMUY, IDEXY, BUD, EQNR, HSBC, YPF, RHHBY"
 )
 
 rf_annual_pct = st.sidebar.number_input(
@@ -150,9 +150,9 @@ st.sidebar.divider()
 
 n_simulations = st.sidebar.number_input(
     "Cantidad de portfolios simulados",
-    value=5000,
+    value=2000,
     min_value=500,
-    max_value=50000,
+    max_value=20000,
     step=500
 )
 
@@ -168,6 +168,7 @@ def limpiar_tickers(tickers_input):
     return tickers
 
 
+@st.cache_data(ttl=3600)
 def descargar_precios(tickers, fecha_inicio, fecha_final):
     try:
         data = yf.download(
@@ -179,34 +180,42 @@ def descargar_precios(tickers, fecha_inicio, fecha_final):
             threads=False
         )
 
-        if data is None or data.empty:
+        if data is None:
+            return pd.DataFrame()
+
+        if data.empty:
             return pd.DataFrame()
 
         if isinstance(data.columns, pd.MultiIndex):
-            if "Close" in data.columns.get_level_values(0):
-                prices = data["Close"]
-            else:
-                return pd.DataFrame()
-        else:
-            if "Close" in data.columns:
-                prices = data[["Close"]]
-                prices.columns = tickers
-            else:
+            if "Close" not in data.columns.get_level_values(0):
                 return pd.DataFrame()
 
+            prices = data["Close"]
+
+        else:
+            if "Close" not in data.columns:
+                return pd.DataFrame()
+
+            prices = data[["Close"]]
+            prices.columns = tickers
+
         prices = prices.dropna(axis=1, how="all")
+
+        if prices.empty:
+            return pd.DataFrame()
+
         prices.index = pd.to_datetime(prices.index)
 
         try:
             prices_monthly = prices.resample("ME").last()
-        except ValueError:
+        except Exception:
             prices_monthly = prices.resample("M").last()
 
         return prices_monthly
 
     except Exception as e:
         st.error("Ocurrió un error al descargar precios.")
-        st.code(str(e))
+        st.exception(e)
         return pd.DataFrame()
 
 
@@ -344,413 +353,437 @@ def generar_portfolios_simulados(mu, cov, rf_annual, min_weight, max_weight, n_s
     return pd.DataFrame(results, columns=["Retorno", "Volatilidad", "Sharpe"])
 
 
-def formato_pct_df(df, decimales=2):
-    return df.style.format(f"{{:.{decimales}f}}%")
-
-
 # ============================================================
 # CALCULO PRINCIPAL
 # ============================================================
 
 if boton:
 
-    tickers = limpiar_tickers(tickers_input)
+    try:
 
-    if len(tickers) == 0:
-        st.error("Tenés que ingresar al menos un ticker.")
-        st.stop()
+        tickers = limpiar_tickers(tickers_input)
 
-    if min_weight * len(tickers) > 1:
-        st.error("El peso mínimo es demasiado alto para la cantidad de activos. Bajalo.")
-        st.stop()
+        if len(tickers) == 0:
+            st.error("Tenés que ingresar al menos un ticker.")
+            st.stop()
 
-    if max_weight * len(tickers) < 1:
-        st.error("El peso máximo es demasiado bajo para poder sumar 100%. Subilo.")
-        st.stop()
+        if min_weight * len(tickers) > 1:
+            st.error("El peso mínimo es demasiado alto para la cantidad de activos. Bajalo.")
+            st.stop()
 
-    st.subheader("Tickers seleccionados")
-    st.write(tickers)
+        if max_weight * len(tickers) < 1:
+            st.error("El peso máximo es demasiado bajo para poder sumar 100%. Subilo.")
+            st.stop()
 
-    # ========================================================
-    # DESCARGA DE PRECIOS
-    # ========================================================
+        st.subheader("Tickers seleccionados")
+        st.write(tickers)
 
-    prices_monthly = descargar_precios(tickers, fecha_inicio, fecha_final)
+        # ========================================================
+        # DESCARGA DE PRECIOS
+        # ========================================================
 
-    if prices_monthly.empty:
-        st.error("No se pudieron descargar precios. Revisá los tickers.")
-        st.stop()
+        with st.spinner("Descargando precios y calculando retornos..."):
+            prices_monthly = descargar_precios(tickers, fecha_inicio, fecha_final)
 
-    min_obs = 12
-    valid_columns = prices_monthly.columns[prices_monthly.notna().sum() >= min_obs]
-    prices_monthly = prices_monthly[valid_columns]
+        if prices_monthly is None or prices_monthly.empty:
+            st.error("No se pudieron descargar precios. Revisá los tickers.")
+            st.stop()
 
-    if prices_monthly.shape[1] == 0:
-        st.error("Ningún ticker tiene suficientes datos.")
-        st.stop()
+        min_obs = 12
+        valid_columns = prices_monthly.columns[prices_monthly.notna().sum() >= min_obs]
+        prices_monthly = prices_monthly[valid_columns]
 
-    # ========================================================
-    # RETORNOS
-    # ========================================================
+        if prices_monthly.shape[1] == 0:
+            st.error("Ningún ticker tiene suficientes datos.")
+            st.stop()
 
-    returns_monthly = prices_monthly.pct_change().dropna(how="all")
-    returns_clean = returns_monthly.dropna()
+        # ========================================================
+        # RETORNOS
+        # ========================================================
 
-    if returns_clean.empty:
-        st.error("No hay suficientes retornos completos para optimizar.")
-        st.stop()
+        returns_monthly = prices_monthly.pct_change().dropna(how="all")
+        returns_clean = returns_monthly.dropna()
 
-    # ========================================================
-    # METRICAS
-    # ========================================================
+        if returns_clean.empty:
+            st.error("No hay suficientes retornos completos para optimizar.")
+            st.stop()
 
-    mu_annual, cov_annual, corr_matrix, summary = calcular_metricas(returns_clean)
+        if len(returns_clean) < 12:
+            st.error("No hay suficientes observaciones para optimizar. Probá ampliar el período o cambiar los activos.")
+            st.stop()
 
-    # ========================================================
-    # OPTIMIZACION
-    # ========================================================
+        # ========================================================
+        # METRICAS
+        # ========================================================
 
-    result = optimizar_portfolio(
-        mu=mu_annual,
-        cov=cov_annual,
-        rf_annual=rf_annual,
-        min_weight=min_weight,
-        max_weight=max_weight,
-        optimization_method=optimization_method,
-        target_return=target_return
-    )
+        mu_annual, cov_annual, corr_matrix, summary = calcular_metricas(returns_clean)
 
-    if not result.success:
-        st.error("La optimización no encontró una solución factible. Probá relajar restricciones o bajar el retorno objetivo.")
-        st.code(str(result.message))
-        st.stop()
+        # ========================================================
+        # OPTIMIZACION
+        # ========================================================
 
-    optimal_weights = result.x
+        with st.spinner("Optimizando portfolio..."):
+            result = optimizar_portfolio(
+                mu=mu_annual,
+                cov=cov_annual,
+                rf_annual=rf_annual,
+                min_weight=min_weight,
+                max_weight=max_weight,
+                optimization_method=optimization_method,
+                target_return=target_return
+            )
 
-    optimal_return = portfolio_return(optimal_weights, mu_annual)
-    optimal_volatility = portfolio_volatility(optimal_weights, cov_annual)
-    optimal_sharpe = portfolio_sharpe(optimal_weights, mu_annual, cov_annual, rf_annual)
+        if not result.success:
+            st.error("La optimización no encontró una solución factible. Probá relajar restricciones o bajar el retorno objetivo.")
+            st.code(str(result.message))
+            st.stop()
 
-    weights_df = pd.DataFrame({
-        "Activo": returns_clean.columns,
-        "Peso óptimo": optimal_weights,
-        "Peso óptimo (%)": optimal_weights * 100
-    })
+        optimal_weights = result.x
 
-    weights_df["Peso óptimo"] = weights_df["Peso óptimo"].apply(lambda x: limpiar_valores_chicos(x))
-    weights_df["Peso óptimo (%)"] = weights_df["Peso óptimo (%)"].apply(lambda x: 0 if abs(x) < 1e-6 else x)
-    weights_df = weights_df.sort_values("Peso óptimo", ascending=False)
+        optimal_return = portfolio_return(optimal_weights, mu_annual)
+        optimal_volatility = portfolio_volatility(optimal_weights, cov_annual)
+        optimal_sharpe = portfolio_sharpe(optimal_weights, mu_annual, cov_annual, rf_annual)
 
-    long_exposure = weights_df.loc[weights_df["Peso óptimo"] > 0, "Peso óptimo"].sum()
-    short_exposure = weights_df.loc[weights_df["Peso óptimo"] < 0, "Peso óptimo"].sum()
-    net_exposure = weights_df["Peso óptimo"].sum()
+        weights_df = pd.DataFrame({
+            "Activo": returns_clean.columns,
+            "Peso óptimo": optimal_weights,
+            "Peso óptimo (%)": optimal_weights * 100
+        })
 
-    portfolio_returns = returns_clean.dot(optimal_weights)
-    portfolio_wealth = (1 + portfolio_returns).cumprod() * 100
-    portfolio_drawdown, portfolio_max_drawdown = calcular_drawdown(portfolio_returns)
+        weights_df["Peso óptimo"] = weights_df["Peso óptimo"].apply(lambda x: limpiar_valores_chicos(x))
+        weights_df["Peso óptimo (%)"] = weights_df["Peso óptimo (%)"].apply(lambda x: 0 if abs(x) < 1e-6 else x)
+        weights_df = weights_df.sort_values("Peso óptimo", ascending=False)
 
-    # ========================================================
-    # RESULTADOS PRINCIPALES
-    # ========================================================
+        long_exposure = weights_df.loc[weights_df["Peso óptimo"] > 0, "Peso óptimo"].sum()
+        short_exposure = weights_df.loc[weights_df["Peso óptimo"] < 0, "Peso óptimo"].sum()
+        net_exposure = weights_df["Peso óptimo"].sum()
 
-    st.header("Resultados")
+        portfolio_returns = returns_clean.dot(optimal_weights)
+        portfolio_wealth = (1 + portfolio_returns).cumprod() * 100
+        portfolio_drawdown, portfolio_max_drawdown = calcular_drawdown(portfolio_returns)
 
-    col1, col2, col3, col4 = st.columns(4)
+        # ========================================================
+        # RESULTADOS PRINCIPALES
+        # ========================================================
 
-    col1.metric("Retorno esperado anual", f"{optimal_return:.2%}")
-    col2.metric("Volatilidad anual", f"{optimal_volatility:.2%}")
-    col3.metric("Sharpe Ratio", f"{optimal_sharpe:.3f}")
-    col4.metric("Max Drawdown", f"{portfolio_max_drawdown:.2%}")
+        st.header("Resultados")
 
-    col5, col6, col7, col8 = st.columns(4)
+        col1, col2, col3, col4 = st.columns(4)
 
-    col5.metric("Risk Free", f"{rf_annual:.2%}")
-    col6.metric("Exposición Long", f"{long_exposure:.2%}")
-    col7.metric("Exposición Short", f"{short_exposure:.2%}")
-    col8.metric("Exposición Neta", f"{net_exposure:.2%}")
+        col1.metric("Retorno esperado anual", f"{optimal_return:.2%}")
+        col2.metric("Volatilidad anual", f"{optimal_volatility:.2%}")
+        col3.metric("Sharpe Ratio", f"{optimal_sharpe:.3f}")
+        col4.metric("Max Drawdown", f"{portfolio_max_drawdown:.2%}")
 
-    st.caption(f"Método utilizado: **{optimization_method}**")
+        col5, col6, col7, col8 = st.columns(4)
 
-    if optimization_method == "Retorno objetivo":
-        st.caption(f"Retorno objetivo anual cargado: **{target_return:.2%}**")
+        col5.metric("Risk Free", f"{rf_annual:.2%}")
+        col6.metric("Exposición Long", f"{long_exposure:.2%}")
+        col7.metric("Exposición Short", f"{short_exposure:.2%}")
+        col8.metric("Exposición Neta", f"{net_exposure:.2%}")
 
-    st.divider()
+        st.caption(f"Método utilizado: **{optimization_method}**")
 
-    # ========================================================
-    # PESOS
-    # ========================================================
+        if optimization_method == "Retorno objetivo":
+            st.caption(f"Retorno objetivo anual cargado: **{target_return:.2%}**")
 
-    st.subheader("Composición de la cartera")
+        st.divider()
 
-    weights_show = weights_df[["Activo", "Peso óptimo (%)"]].copy()
-    weights_show["Peso óptimo (%)"] = weights_show["Peso óptimo (%)"].map(lambda x: f"{x:.2f}%")
+        # ========================================================
+        # PESOS
+        # ========================================================
 
-    st.dataframe(weights_show, use_container_width=True)
+        st.subheader("Composición de la cartera")
 
-    fig_pie, ax_pie = plt.subplots(figsize=(7, 5))
+        weights_show = weights_df[["Activo", "Peso óptimo (%)"]].copy()
+        weights_show["Peso óptimo (%)"] = weights_show["Peso óptimo (%)"].map(lambda x: f"{x:.2f}%")
 
-    pie_df = weights_df.copy()
-    pie_df["Peso absoluto"] = pie_df["Peso óptimo"].abs()
-    pie_df = pie_df[pie_df["Peso absoluto"] > 0.0001]
+        st.dataframe(weights_show, use_container_width=True)
 
-    if not pie_df.empty:
-        ax_pie.pie(
-            pie_df["Peso absoluto"],
-            labels=pie_df["Activo"],
-            autopct="%1.1f%%",
-            startangle=90
+        fig_pie, ax_pie = plt.subplots(figsize=(7, 5))
+
+        pie_df = weights_df.copy()
+        pie_df["Peso absoluto"] = pie_df["Peso óptimo"].abs()
+        pie_df = pie_df[pie_df["Peso absoluto"] > 0.0001]
+
+        if not pie_df.empty:
+            ax_pie.pie(
+                pie_df["Peso absoluto"],
+                labels=pie_df["Activo"],
+                autopct="%1.1f%%",
+                startangle=90
+            )
+            ax_pie.set_title("Pesos óptimos por activo")
+            st.pyplot(fig_pie)
+
+        if allow_short:
+            st.caption("Nota: como se permite short selling, el gráfico muestra pesos absolutos.")
+
+        # ========================================================
+        # PRECIOS BASE 100
+        # ========================================================
+
+        st.subheader("Evolución histórica de precios - Base 100")
+
+        prices_base100 = prices_monthly.copy()
+
+        for col in prices_base100.columns:
+
+            serie = prices_base100[col].dropna()
+
+            if len(serie) == 0:
+                continue
+
+            first_valid = serie.iloc[0]
+
+            if pd.isna(first_valid):
+                continue
+
+            if first_valid == 0:
+                continue
+
+            prices_base100[col] = (
+                prices_base100[col] /
+                first_valid
+            ) * 100
+
+        st.line_chart(prices_base100)
+
+        # ========================================================
+        # WEALTH INDEX
+        # ========================================================
+
+        st.subheader("Evolución de USD 100 invertidos")
+
+        wealth_df = pd.DataFrame({
+            "Portfolio óptimo": portfolio_wealth
+        })
+
+        st.line_chart(wealth_df)
+
+        # ========================================================
+        # DRAWDOWN
+        # ========================================================
+
+        st.subheader("Drawdown histórico del portfolio")
+
+        drawdown_df = pd.DataFrame({
+            "Portfolio óptimo": portfolio_drawdown * 100
+        })
+
+        st.line_chart(drawdown_df)
+
+        # ========================================================
+        # FRONTERA
+        # ========================================================
+
+        st.subheader("Frontera eficiente simulada")
+
+        results_sim = generar_portfolios_simulados(
+            mu=mu_annual,
+            cov=cov_annual,
+            rf_annual=rf_annual,
+            min_weight=min_weight,
+            max_weight=max_weight,
+            n_simulations=n_simulations
         )
-        ax_pie.set_title("Pesos óptimos por activo")
-        st.pyplot(fig_pie)
 
-    if allow_short:
-        st.caption("Nota: como se permite short selling, el gráfico muestra pesos absolutos.")
+        asset_returns = mu_annual
+        asset_vols = np.sqrt(np.diag(cov_annual))
 
-    # ========================================================
-    # PRECIOS BASE 100
-    # ========================================================
+        fig, ax = plt.subplots(figsize=(10, 6))
 
-    st.subheader("Evolución histórica de precios - Base 100")
+        if not results_sim.empty:
+            scatter = ax.scatter(
+                results_sim["Volatilidad"],
+                results_sim["Retorno"],
+                c=results_sim["Sharpe"],
+                cmap="viridis",
+                alpha=0.35,
+                s=12
+            )
+            cbar = fig.colorbar(scatter, ax=ax)
+            cbar.set_label("Sharpe Ratio")
 
-    prices_base100 = prices_monthly.copy()
-
-    for col in prices_base100.columns:
-        first_valid = prices_base100[col].dropna().iloc[0]
-        prices_base100[col] = prices_base100[col] / first_valid * 100
-
-    st.line_chart(prices_base100)
-
-    # ========================================================
-    # WEALTH INDEX
-    # ========================================================
-
-    st.subheader("Evolución de USD 100 invertidos")
-
-    wealth_df = pd.DataFrame({
-        "Portfolio óptimo": portfolio_wealth
-    })
-
-    st.line_chart(wealth_df)
-
-    # ========================================================
-    # DRAWDOWN
-    # ========================================================
-
-    st.subheader("Drawdown histórico del portfolio")
-
-    drawdown_df = pd.DataFrame({
-        "Portfolio óptimo": portfolio_drawdown * 100
-    })
-
-    st.line_chart(drawdown_df)
-
-    # ========================================================
-    # FRONTERA
-    # ========================================================
-
-    st.subheader("Frontera eficiente simulada")
-
-    results_sim = generar_portfolios_simulados(
-        mu=mu_annual,
-        cov=cov_annual,
-        rf_annual=rf_annual,
-        min_weight=min_weight,
-        max_weight=max_weight,
-        n_simulations=n_simulations
-    )
-
-    asset_returns = mu_annual
-    asset_vols = np.sqrt(np.diag(cov_annual))
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    if not results_sim.empty:
-        scatter = ax.scatter(
-            results_sim["Volatilidad"],
-            results_sim["Retorno"],
-            c=results_sim["Sharpe"],
-            cmap="viridis",
-            alpha=0.35,
-            s=12
+        ax.scatter(
+            asset_vols,
+            asset_returns,
+            color="steelblue",
+            s=80,
+            label="Activos individuales"
         )
-        cbar = fig.colorbar(scatter, ax=ax)
-        cbar.set_label("Sharpe Ratio")
 
-    ax.scatter(
-        asset_vols,
-        asset_returns,
-        color="steelblue",
-        s=80,
-        label="Activos individuales"
-    )
+        for ticker, vol, ret in zip(mu_annual.index, asset_vols, asset_returns):
+            ax.text(
+                vol,
+                ret,
+                ticker,
+                fontsize=9,
+                ha="left",
+                va="bottom"
+            )
 
-    for ticker, vol, ret in zip(mu_annual.index, asset_vols, asset_returns):
+        ax.scatter(
+            optimal_volatility,
+            optimal_return,
+            color="red",
+            s=160,
+            label="Portfolio óptimo"
+        )
+
         ax.text(
-            vol,
-            ret,
-            ticker,
-            fontsize=9,
+            optimal_volatility,
+            optimal_return,
+            "  Óptimo",
+            fontsize=10,
+            fontweight="bold",
             ha="left",
-            va="bottom"
+            va="center"
         )
 
-    ax.scatter(
-        optimal_volatility,
-        optimal_return,
-        color="red",
-        s=160,
-        label="Portfolio óptimo"
-    )
-
-    ax.text(
-        optimal_volatility,
-        optimal_return,
-        "  Óptimo",
-        fontsize=10,
-        fontweight="bold",
-        ha="left",
-        va="center"
-    )
-
-    ax.scatter(
-        0,
-        rf_annual,
-        color="orange",
-        s=100,
-        label="Tasa libre de riesgo"
-    )
-
-    ax.plot(
-        [0, optimal_volatility],
-        [rf_annual, optimal_return],
-        color="orange",
-        linewidth=2,
-        linestyle="--",
-        label="Línea de asignación"
-    )
-
-    ax.set_xlabel("Desvío estándar anual")
-    ax.set_ylabel("Retorno esperado anual")
-    ax.set_title("Relación riesgo-retorno")
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-
-    ax.xaxis.set_major_formatter(lambda x, pos: f"{x:.0%}")
-    ax.yaxis.set_major_formatter(lambda y, pos: f"{y:.0%}")
-
-    st.pyplot(fig)
-
-    # ========================================================
-    # TABLAS
-    # ========================================================
-
-    st.subheader("Esperanzas y volatilidades anualizadas (%)")
-
-    summary_show = summary * 100
-
-    st.dataframe(
-        summary_show.style.format("{:.2f}%"),
-        use_container_width=True
-    )
-
-    st.subheader("Matriz de correlaciones")
-
-    st.dataframe(
-        corr_matrix.style.format("{:.4f}"),
-        use_container_width=True
-    )
-
-    st.subheader("Matriz de covarianzas anuales (%)")
-
-    cov_annual_show = cov_annual * 100
-
-    st.dataframe(
-        cov_annual_show.style.format("{:.4f}%"),
-        use_container_width=True
-    )
-
-    st.subheader("Precios mensuales")
-
-    st.dataframe(
-        prices_monthly.round(2),
-        use_container_width=True
-    )
-
-    st.subheader("Retornos mensuales (%)")
-
-    returns_monthly_show = returns_monthly * 100
-
-    st.dataframe(
-        returns_monthly_show.style.format("{:.2f}%"),
-        use_container_width=True
-    )
-
-    # ========================================================
-    # DESCARGA EXCEL
-    # ========================================================
-
-    output_file = "resultado_portfolio.xlsx"
-
-    portfolio_metrics = pd.DataFrame({
-        "Metrica": [
-            "Metodo de optimizacion",
-            "Retorno esperado anual (%)",
-            "Volatilidad anual (%)",
-            "Sharpe Ratio",
-            "Tasa libre de riesgo anual (%)",
-            "Max Drawdown (%)",
-            "Exposicion Long (%)",
-            "Exposicion Short (%)",
-            "Exposicion Neta (%)"
-        ],
-        "Valor": [
-            optimization_method,
-            optimal_return * 100,
-            optimal_volatility * 100,
-            optimal_sharpe,
-            rf_annual * 100,
-            portfolio_max_drawdown * 100,
-            long_exposure * 100,
-            short_exposure * 100,
-            net_exposure * 100
-        ]
-    })
-
-    weights_excel = weights_df[["Activo", "Peso óptimo (%)"]].copy()
-
-    summary_excel = summary * 100
-    summary_excel.columns = ["Esperanza anual (%)", "Volatilidad anual (%)"]
-
-    cov_annual_excel = cov_annual * 100
-    returns_monthly_excel = returns_monthly * 100
-
-    results_sim_excel = results_sim.copy()
-
-    if not results_sim_excel.empty:
-        results_sim_excel["Retorno (%)"] = results_sim_excel["Retorno"] * 100
-        results_sim_excel["Volatilidad (%)"] = results_sim_excel["Volatilidad"] * 100
-        results_sim_excel = results_sim_excel[["Retorno (%)", "Volatilidad (%)", "Sharpe"]]
-
-    with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-        prices_monthly.to_excel(writer, sheet_name="Precios mensuales")
-        prices_base100.to_excel(writer, sheet_name="Precios Base 100")
-        returns_monthly_excel.to_excel(writer, sheet_name="Retornos mensuales %")
-        summary_excel.to_excel(writer, sheet_name="Metricas activos %")
-        corr_matrix.to_excel(writer, sheet_name="Correlaciones")
-        cov_annual_excel.to_excel(writer, sheet_name="Covarianzas anuales %")
-        weights_excel.to_excel(writer, sheet_name="Pesos optimos %", index=False)
-        portfolio_metrics.to_excel(writer, sheet_name="Portfolio optimo", index=False)
-        results_sim_excel.to_excel(writer, sheet_name="Portfolios simulados", index=False)
-        wealth_df.to_excel(writer, sheet_name="Wealth Index")
-        drawdown_df.to_excel(writer, sheet_name="Drawdown %")
-
-    with open(output_file, "rb") as file:
-        st.download_button(
-            label="Descargar resultados en Excel",
-            data=file,
-            file_name="resultado_portfolio.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ax.scatter(
+            0,
+            rf_annual,
+            color="orange",
+            s=100,
+            label="Tasa libre de riesgo"
         )
+
+        ax.plot(
+            [0, optimal_volatility],
+            [rf_annual, optimal_return],
+            color="orange",
+            linewidth=2,
+            linestyle="--",
+            label="Línea de asignación"
+        )
+
+        ax.set_xlabel("Desvío estándar anual")
+        ax.set_ylabel("Retorno esperado anual")
+        ax.set_title("Relación riesgo-retorno")
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+
+        ax.xaxis.set_major_formatter(lambda x, pos: f"{x:.0%}")
+        ax.yaxis.set_major_formatter(lambda y, pos: f"{y:.0%}")
+
+        st.pyplot(fig)
+
+        # ========================================================
+        # TABLAS
+        # ========================================================
+
+        st.subheader("Esperanzas y volatilidades anualizadas (%)")
+
+        summary_show = summary * 100
+
+        st.dataframe(
+            summary_show.style.format("{:.2f}%"),
+            use_container_width=True
+        )
+
+        st.subheader("Matriz de correlaciones")
+
+        st.dataframe(
+            corr_matrix.style.format("{:.4f}"),
+            use_container_width=True
+        )
+
+        st.subheader("Matriz de covarianzas anuales (%)")
+
+        cov_annual_show = cov_annual * 100
+
+        st.dataframe(
+            cov_annual_show.style.format("{:.4f}%"),
+            use_container_width=True
+        )
+
+        st.subheader("Precios mensuales")
+
+        st.dataframe(
+            prices_monthly.round(2),
+            use_container_width=True
+        )
+
+        st.subheader("Retornos mensuales (%)")
+
+        returns_monthly_show = returns_monthly * 100
+
+        st.dataframe(
+            returns_monthly_show.style.format("{:.2f}%"),
+            use_container_width=True
+        )
+
+        # ========================================================
+        # DESCARGA EXCEL
+        # ========================================================
+
+        output_file = "resultado_portfolio.xlsx"
+
+        portfolio_metrics = pd.DataFrame({
+            "Metrica": [
+                "Metodo de optimizacion",
+                "Retorno esperado anual (%)",
+                "Volatilidad anual (%)",
+                "Sharpe Ratio",
+                "Tasa libre de riesgo anual (%)",
+                "Max Drawdown (%)",
+                "Exposicion Long (%)",
+                "Exposicion Short (%)",
+                "Exposicion Neta (%)"
+            ],
+            "Valor": [
+                optimization_method,
+                optimal_return * 100,
+                optimal_volatility * 100,
+                optimal_sharpe,
+                rf_annual * 100,
+                portfolio_max_drawdown * 100,
+                long_exposure * 100,
+                short_exposure * 100,
+                net_exposure * 100
+            ]
+        })
+
+        weights_excel = weights_df[["Activo", "Peso óptimo (%)"]].copy()
+
+        summary_excel = summary * 100
+        summary_excel.columns = ["Esperanza anual (%)", "Volatilidad anual (%)"]
+
+        cov_annual_excel = cov_annual * 100
+        returns_monthly_excel = returns_monthly * 100
+
+        results_sim_excel = results_sim.copy()
+
+        if not results_sim_excel.empty:
+            results_sim_excel["Retorno (%)"] = results_sim_excel["Retorno"] * 100
+            results_sim_excel["Volatilidad (%)"] = results_sim_excel["Volatilidad"] * 100
+            results_sim_excel = results_sim_excel[["Retorno (%)", "Volatilidad (%)", "Sharpe"]]
+
+        with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+            prices_monthly.to_excel(writer, sheet_name="Precios mensuales")
+            prices_base100.to_excel(writer, sheet_name="Precios Base 100")
+            returns_monthly_excel.to_excel(writer, sheet_name="Retornos mensuales %")
+            summary_excel.to_excel(writer, sheet_name="Metricas activos %")
+            corr_matrix.to_excel(writer, sheet_name="Correlaciones")
+            cov_annual_excel.to_excel(writer, sheet_name="Covarianzas anuales %")
+            weights_excel.to_excel(writer, sheet_name="Pesos optimos %", index=False)
+            portfolio_metrics.to_excel(writer, sheet_name="Portfolio optimo", index=False)
+            results_sim_excel.to_excel(writer, sheet_name="Portfolios simulados", index=False)
+            wealth_df.to_excel(writer, sheet_name="Wealth Index")
+            drawdown_df.to_excel(writer, sheet_name="Drawdown %")
+
+        with open(output_file, "rb") as file:
+            st.download_button(
+                label="Descargar resultados en Excel",
+                data=file,
+                file_name="resultado_portfolio.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    except Exception as e:
+        st.error("Error durante la ejecución")
+        st.exception(e)
 
 else:
     st.info(
