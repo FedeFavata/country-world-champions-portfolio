@@ -60,7 +60,7 @@ fecha_inicio = st.sidebar.date_input(
 
 fecha_final = st.sidebar.date_input(
     "Fecha final",
-    value=pd.to_datetime("2026-06-30")
+    value=(pd.Timestamp.today() - pd.Timedelta(days=1)).date()
 )
 
 tickers_input = st.sidebar.text_area(
